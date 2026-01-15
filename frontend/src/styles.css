@@ -1,0 +1,144 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Theme tokens (one accent color) */
+:root{
+  --app-bg: 246 244 241;       /* #F6F4F1 */
+  --app-surface: 255 255 255;  /* #FFFFFF */
+  --app-surface2: 251 250 248; /* #FBFAF8 */
+  --app-border: 231 227 221;   /* #E7E3DD */
+  --app-text: 31 41 55;        /* #1F2937 */
+  --app-muted: 107 114 128;    /* #6B7280 */
+  --app-accent: 46 111 102;    /* #2E6F66 */
+  --app-accent-2: 24 83 75;    /* deeper accent */
+  --app-ring: 46 111 102;
+  color-scheme: light;
+}
+
+.dark{
+  --app-bg: 14 17 20;          /* #0E1114 */
+  --app-surface: 20 24 28;     /* #14181C */
+  --app-surface2: 16 20 24;    /* #101418 */
+  --app-border: 37 45 54;      /* #252D36 */
+  --app-text: 236 240 244;     /* #ECF0F4 */
+  --app-muted: 154 163 174;    /* #9AA3AE */
+  --app-accent: 78 172 159;    /* #4EAC9F */
+  --app-accent-2: 62 146 134;
+  --app-ring: 78 172 159;
+  color-scheme: dark;
+}
+
+* { -webkit-tap-highlight-color: transparent; }
+
+@layer base{
+  body{
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+    @apply bg-app-bg text-app-text;
+  }
+
+  /* subtle “alive” background (light + dark aware) */
+  body::before{
+    content:"";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(900px 520px at 12% -10%, rgba(46,111,102,0.11), transparent 60%),
+      radial-gradient(760px 460px at 92% 0%, rgba(46,111,102,0.08), transparent 55%),
+      linear-gradient(180deg, rgba(255,255,255,0.55), rgba(255,255,255,0.0));
+    /* reduce visual fatigue: keep it subtle */
+    opacity: 0.72;
+  }
+  .dark body::before{
+    background:
+      radial-gradient(900px 520px at 12% -10%, rgba(78,172,159,0.14), transparent 60%),
+      radial-gradient(760px 460px at 92% 0%, rgba(78,172,159,0.09), transparent 55%),
+      linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.0));
+  }
+}
+
+@layer components{
+  .card{ @apply bg-app-surface border border-app-border rounded-xl2 shadow-soft; }
+  .card-soft{ @apply bg-app-surface2 border border-app-border rounded-xl2; }
+
+  .chip{ @apply inline-flex items-center rounded-full border border-app-border bg-app-surface2 px-2.5 py-1 text-xs text-app-muted; }
+
+  .btn{ @apply inline-flex items-center justify-center rounded-xl2 border border-app-border bg-app-surface px-3 py-2 text-sm font-medium shadow-soft hover:shadow-lift transition active:scale-[0.99]; }
+  .btn-accent{ @apply border-transparent bg-app-accent text-white hover:opacity-95; }
+  .btn-ghost{ @apply border-transparent bg-transparent shadow-none hover:bg-app-surface2; }
+
+  .input{ @apply w-full rounded-xl2 border border-app-border bg-app-surface px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[rgb(var(--app-ring)/0.25)] focus:border-app-accent; }
+
+  .label{ @apply text-xs font-medium text-app-muted; }
+  .link{ @apply text-app-accent hover:underline; }
+  .divider{ @apply h-px bg-app-border/70 my-4; }
+
+  .page-title{ @apply text-2xl font-semibold tracking-tight; }
+  .page-subtitle{ @apply text-sm text-app-muted; }
+
+  .kpi{ @apply card p-4; }
+  .kpi-label{ @apply text-xs text-app-muted; }
+  .kpi-value{ @apply text-xl font-semibold tracking-tight; }
+
+  /* Small utility for “fintech pill” chips */
+  .pill{ @apply inline-flex items-center gap-1 rounded-full bg-app-surface2 border border-app-border px-2.5 py-1 text-xs text-app-muted; }
+
+  /* Mobile bottom navigation */
+  .navbtn{ @apply rounded-xl2 px-2 py-2 border border-app-border bg-app-surface2 text-app-muted text-[11px] flex flex-col items-center justify-center gap-1 transition active:scale-[0.99]; }
+  .navbtn:hover{ @apply bg-app-surface; }
+  .navbtn-active{ @apply bg-app-surface border-app-accent/25 text-app-accent; }
+
+  /* Desktop sidebar navigation */
+  .sidebar{ @apply bg-app-surface/80 backdrop-blur border-r border-app-border; }
+  .sideitem{ @apply relative w-full flex items-center gap-3 rounded-xl2 px-3 py-2 text-sm text-app-muted hover:bg-app-surface2 hover:text-app-text transition; }
+  .sideitem-active{ @apply bg-app-surface2 text-app-text border border-app-accent/20 shadow-soft; }
+  .sideitem-active::before{
+    content:"";
+    position:absolute;
+    left:8px;
+    top:50%;
+    width:3px;
+    height:18px;
+    transform:translateY(-50%);
+    border-radius:999px;
+    background: rgb(var(--app-accent));
+    opacity:0.9;
+  }
+  .sideicon{ @apply h-5 w-5; }
+  .sidelabel{ @apply truncate; }
+
+  /* Recharts base styling (keep calm) */
+  .recharts-cartesian-grid-horizontal line,
+  .recharts-cartesian-grid-vertical line{ stroke: rgb(var(--app-border) / 0.8); }
+  .recharts-tooltip-wrapper{ outline: none; }
+}
+
+
+
+/* iOS Chrome overscroll fix */
+html, body {
+  height: 100%;
+  min-height: 100%;
+  background: rgb(var(--app-bg));
+}
+
+html {
+  overscroll-behavior-y: none;
+}
+
+body {
+  overflow-x: hidden;
+}
+
+body::before {
+  position: fixed;
+  inset: 0;
+  transform: translateZ(0);
+}
+
+@supports (-webkit-touch-callout: none) {
+  html, body {
+    background: rgb(var(--app-bg));
+  }
+}
