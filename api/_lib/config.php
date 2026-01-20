@@ -1,6 +1,4 @@
 <?php
-// Finance OS API config
-// IMPORTANT: edit these values after upload.
 
 return [
   'db' => [
