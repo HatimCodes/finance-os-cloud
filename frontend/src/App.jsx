@@ -12,6 +12,7 @@ import Setup from "./pages/Setup.jsx";
 import { FinanceProvider, useFinance } from "./state/financeStore.jsx";
 import { AuthProvider } from "./state/authStore.jsx";
 import { SyncProvider } from "./state/syncStore.jsx";
+import { CategoriesProvider } from "./state/categoriesStore.jsx";
 import Login from "./pages/Login.jsx";
 import Register from "./pages/Register.jsx";
 import AuthGuard from "./components/AuthGuard.jsx";
@@ -31,8 +32,9 @@ export default function App() {
   return (
     <AuthProvider>
       <SyncProvider>
-        <FinanceProvider>
-          <Routes>
+        <CategoriesProvider>
+          <FinanceProvider>
+            <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
 
@@ -97,8 +99,9 @@ export default function App() {
           />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
-          </Routes>
-        </FinanceProvider>
+            </Routes>
+          </FinanceProvider>
+        </CategoriesProvider>
       </SyncProvider>
     </AuthProvider>
   );

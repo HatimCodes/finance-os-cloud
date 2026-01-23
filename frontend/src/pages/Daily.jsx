@@ -4,6 +4,7 @@ import Modal from "../components/Modal.jsx";
 import PageHeader from "../components/PageHeader.jsx";
 import EmptyState from "../components/EmptyState.jsx";
 import { useFinance } from "../state/financeStore.jsx";
+import { useCategories } from "../state/categoriesStore.jsx";
 import { formatMoney, monthKey, todayISO } from "../state/money.js";
 
 function MonthSelect({ value, onChange }) {
@@ -21,13 +22,15 @@ function MonthSelect({ value, onChange }) {
 
 export default function Daily() {
   const { state, dispatch, api } = useFinance();
+  const cats = useCategories();
   const currency = state.profile.currency || "MAD";
   const [mk, setMk] = useState(monthKey(todayISO()));
   const [open, setOpen] = useState(false);
 
   const [date, setDate] = useState(todayISO());
   const [amount, setAmount] = useState("");
-  const [category, setCategory] = useState("Food");
+  const [categoryId, setCategoryId] = useState(null);
+  const [newCatName, setNewCatName] = useState("");
   const [payment, setPayment] = useState("Cash");
   const [needWant, setNeedWant] = useState("Need");
   const [note, setNote] = useState("");
@@ -41,13 +44,34 @@ export default function Daily() {
 
   const monthSpent = txMonth.filter(t=>t.type==="expense").reduce((s,t)=>s+Number(t.amount||0),0);
 
+  // Ensure a default category is selected once categories load.
+  React.useEffect(() => {
+    const list = cats.expenseCategories();
+    if (!categoryId && list.length > 0) {
+      setCategoryId(Number(list[0].id));
+    }
+  }, [cats.categories]);
+
   function add() {
     const a = Number(amount||0);
     if (!a || a <= 0) return;
-    api.addExpense({ date, amount: a, category, note, payment, needWant });
+    const selected = cats.map.get(Number(categoryId));
+    api.addExpense({ date, amount: a, categoryId: categoryId ? Number(categoryId) : null, categoryName: selected?.name || "Other", note, payment, needWant });
     setAmount("");
     setNote("");
     setOpen(false);
+  }
+
+  async function createFromModal() {
+    const name = (newCatName || "").trim();
+    if (!name) return;
+    try {
+      const created = await cats.createCategory({ name, kind: "expense" });
+      setNewCatName("");
+      setCategoryId(Number(created.id));
+    } catch {
+      // error displayed in Settings; keep modal calm
+    }
   }
 
   function del(id) {
@@ -99,7 +123,7 @@ export default function Daily() {
               ) : txMonth.map(t => (
                 <tr key={t.id} className="border-b border-app-border/60">
                   <td className="py-2">{t.date}</td>
-                  <td className="py-2">{t.type === "income" ? <span className="chip">Income</span> : t.category}</td>
+                  <td className="py-2">{t.type === "income" ? <span className="chip">Income</span> : cats.nameOf(t.categoryId ?? null) || t.category}</td>
                   <td className="py-2 text-app-muted">{t.note || "-"}</td>
                   <td className="py-2 text-right font-medium">
                     {t.type === "income" ? "+" : "-"}{formatMoney(t.amount, currency)}
@@ -123,7 +147,7 @@ export default function Daily() {
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <div className="text-sm font-semibold">
-                      {t.type === "income" ? "Income" : t.category}
+                      {t.type === "income" ? "Income" : (cats.nameOf(t.categoryId ?? null) || t.category)}
                     </div>
                     <div className="text-xs text-app-muted mt-1">{t.date}{t.note ? ` • ${t.note}` : ""}</div>
                   </div>
@@ -155,9 +179,21 @@ export default function Daily() {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <div className="label">Category</div>
-              <select className="input" value={category} onChange={(e)=>setCategory(e.target.value)}>
-                {state.categories.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
+              {cats.loading ? (
+                <div className="input flex items-center text-app-muted">Loading…</div>
+              ) : (cats.expenseCategories().length === 0 ? (
+                <div className="space-y-2">
+                  <div className="text-xs text-app-muted">No categories yet. Create your first one:</div>
+                  <div className="flex gap-2">
+                    <input className="input" value={newCatName} onChange={(e)=>setNewCatName(e.target.value)} placeholder="e.g. Groceries" />
+                    <button className="btn btn-accent" onClick={createFromModal}>Create</button>
+                  </div>
+                </div>
+              ) : (
+                <select className="input" value={categoryId ?? ""} onChange={(e)=>setCategoryId(Number(e.target.value))}>
+                  {cats.expenseCategories().map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              ))}
             </div>
             <div>
               <div className="label">Need / Want</div>

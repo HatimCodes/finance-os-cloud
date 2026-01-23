@@ -9,15 +9,10 @@ const FinanceCtx = createContext(null);
 
 function normalizeNeedItem(n) {
   if (!n || typeof n !== "object") return n;
-  return {
-    // new fields (per-month) — older backups won’t have them
-    paid: false,
-    paidAt: null,
-    ...n,
-    // enforce types
-    paid: Boolean(n.paid),
-    paidAt: n.paidAt ? String(n.paidAt) : null,
-  };
+  const raw = { ...n };
+  const paid = Boolean(raw.paid || false);
+  const paidAt = raw.paidAt ? String(raw.paidAt) : null;
+  return { ...raw, paid, paidAt };
 }
 
 function normalizeMonthNeeds(obj) {
@@ -130,8 +125,8 @@ function OfflineFinanceProvider({ children }) {
     function addIncome({ date, amount, note, payment }) {
       dispatch({ type: "TX_ADD", tx: { type: "income", date, amount: Number(amount), category: "Income", payment, note } });
     }
-    function addExpense({ date, amount, category, note, payment, needWant="Need" }) {
-      dispatch({ type: "TX_ADD", tx: { type: "expense", date, amount: Number(amount), category, payment, note, needWant } });
+    function addExpense({ date, amount, categoryId, categoryName, note, payment, needWant="Need" }) {
+      dispatch({ type: "TX_ADD", tx: { type: "expense", date, amount: Number(amount), categoryId: categoryId ?? null, category: categoryName ?? "Other", payment, note, needWant } });
     }
     function addBucket({ date, amount, bucketId, note, payment }) {
       dispatch({ type: "TX_ADD", tx: { type: "bucket_add", date, amount: Number(amount), bucketId, category: "Bucket", payment, note } });
@@ -175,8 +170,8 @@ function OnlineFinanceProvider({ children }) {
     function addIncome({ date, amount, note, payment }) {
       dispatch({ type: "TX_ADD", tx: { type: "income", date, amount: Number(amount), category: "Income", payment, note } });
     }
-    function addExpense({ date, amount, category, note, payment, needWant="Need" }) {
-      dispatch({ type: "TX_ADD", tx: { type: "expense", date, amount: Number(amount), category, payment, note, needWant } });
+    function addExpense({ date, amount, categoryId, categoryName, note, payment, needWant="Need" }) {
+      dispatch({ type: "TX_ADD", tx: { type: "expense", date, amount: Number(amount), categoryId: categoryId ?? null, category: categoryName ?? "Other", payment, note, needWant } });
     }
     function addBucket({ date, amount, bucketId, note, payment }) {
       dispatch({ type: "TX_ADD", tx: { type: "bucket_add", date, amount: Number(amount), bucketId, category: "Bucket", payment, note } });

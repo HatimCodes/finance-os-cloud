@@ -24,6 +24,17 @@ $hash = safe_password_hash($password);
 try {
   $stmt = $pdo->prepare('INSERT INTO users (id, email, password_hash, display_name) VALUES (?, ?, ?, ?)');
   $stmt->execute([$userId, $email, $hash, $displayName !== '' ? $displayName : null]);
+
+  // Seed minimal neutral default categories for new accounts (expense only).
+  // Keep it universal (no personal/identifiable items).
+  $defaults = ['Needs', 'Food', 'Transport', 'Health', 'Subscriptions', 'Fun', 'Other'];
+  $stmtC = $pdo->prepare('INSERT INTO categories (user_id, name, kind, sort_order) VALUES (?, ?, ?, ?)');
+  $i = 0;
+  foreach ($defaults as $name) {
+    // kind is kept as a string for future extension; currently we use "expense".
+    $stmtC->execute([$userId, $name, 'expense', $i]);
+    $i++;
+  }
 } catch (PDOException $e) {
   // Duplicate email
   if ((int)($e->errorInfo[1] ?? 0) === 1062) {

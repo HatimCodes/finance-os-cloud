@@ -5,6 +5,7 @@ import { useFinance } from "../state/financeStore.jsx";
 import { uid } from "../state/money.js";
 import { useAuth } from "../state/authStore.jsx";
 import { useSync } from "../state/syncStore.jsx";
+import { useCategories } from "../state/categoriesStore.jsx";
 
 function MonthInput({ value, onChange, placeholder = "YYYY-MM" }) {
   return (
@@ -45,6 +46,7 @@ export default function Settings() {
   const { auth, api } = useAuth();
   const sync = useSync();
   const nav = useNavigate();
+  const cats = useCategories();
 
   const [name, setName] = useState(state.profile.name || "");
   const [currency, setCurrency] = useState(state.profile.currency || "MAD");
@@ -53,7 +55,13 @@ export default function Settings() {
   );
 
   // Appearance (standalone section)
-  const [theme, setTheme] = useState(state.profile.theme || "light");
+  const [theme, setTheme] = useState(state.profile.theme || "dark");
+
+  // Categories manager UI state
+  const [catNewName, setCatNewName] = useState("");
+  const [catMsg, setCatMsg] = useState(null);
+  const [editingId, setEditingId] = useState(null);
+  const [editingName, setEditingName] = useState("");
 
   function setStatePatch(patch) {
     dispatch({ type: "RESET", payload: { ...state, ...patch } });
@@ -223,6 +231,191 @@ export default function Settings() {
             >
               Apply
             </button>
+          </div>
+        </div>
+      </Section>
+
+      <Section title="Categories">
+        <div className="grid gap-3">
+          <div className="text-sm text-app-muted">
+            Categories are cloud-saved per user. Your expense dropdowns use this list.
+          </div>
+
+          {catMsg ? (
+            <div className="rounded-xl2 border border-app-border bg-app-surface2 p-3 text-sm">{catMsg}</div>
+          ) : null}
+
+          <div className="flex flex-col sm:flex-row gap-2">
+            <input
+              className="input flex-1"
+              placeholder="Add category (e.g. Groceries)"
+              value={catNewName}
+              onChange={(e) => setCatNewName(e.target.value)}
+            />
+            <button
+              className="btn btn-accent"
+              type="button"
+              onClick={async () => {
+                setCatMsg(null);
+                const name = (catNewName || "").trim();
+                if (!name) return;
+                try {
+                  await cats.createCategory({ name, kind: "expense" });
+                  setCatNewName("");
+                  setCatMsg("Category added.");
+                } catch (e) {
+                  setCatMsg(e?.message || "Failed to add category");
+                }
+              }}
+            >
+              Add
+            </button>
+          </div>
+
+          <div className="grid gap-2">
+            {cats.loading ? (
+              <div className="text-sm text-app-muted">Loading categories…</div>
+            ) : (cats.expenseCategories().length === 0 ? (
+              <div className="rounded-xl2 border border-app-border bg-app-surface p-4">
+                <div className="text-sm font-semibold">No categories yet</div>
+                <div className="text-sm text-app-muted mt-1">Add your first category above to start tracking expenses cleanly.</div>
+              </div>
+            ) : (
+              cats.expenseCategories().map((c, idx, arr) => {
+                const isEditing = editingId === Number(c.id);
+                return (
+                  <div key={c.id} className="card p-3 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="flex flex-col gap-1">
+                        <button
+                          className="btn btn-ghost !px-2"
+                          title="Move up"
+                          disabled={idx === 0}
+                          onClick={async () => {
+                            if (idx === 0) return;
+                            const prev = arr[idx - 1];
+                            try {
+                              // swap sort_order
+                              await cats.updateCategory({ id: Number(c.id), sort_order: (Number(prev.sort_order) ?? 0) });
+                              await cats.updateCategory({ id: Number(prev.id), sort_order: (Number(c.sort_order) ?? 0) });
+                            } catch (e) {
+                              setCatMsg(e?.message || "Failed to reorder");
+                            }
+                          }}
+                          type="button"
+                        >
+                          ↑
+                        </button>
+                        <button
+                          className="btn btn-ghost !px-2"
+                          title="Move down"
+                          disabled={idx === arr.length - 1}
+                          onClick={async () => {
+                            if (idx === arr.length - 1) return;
+                            const next = arr[idx + 1];
+                            try {
+                              await cats.updateCategory({ id: Number(c.id), sort_order: (Number(next.sort_order) ?? 0) });
+                              await cats.updateCategory({ id: Number(next.id), sort_order: (Number(c.sort_order) ?? 0) });
+                            } catch (e) {
+                              setCatMsg(e?.message || "Failed to reorder");
+                            }
+                          }}
+                          type="button"
+                        >
+                          ↓
+                        </button>
+                      </div>
+
+                      <div className="min-w-0">
+                        {isEditing ? (
+                          <input
+                            className="input"
+                            value={editingName}
+                            onChange={(e) => setEditingName(e.target.value)}
+                          />
+                        ) : (
+                          <div className="text-sm font-semibold truncate">{c.name}</div>
+                        )}
+                        <div className="text-xs text-app-muted">Expense category</div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      {isEditing ? (
+                        <>
+                          <button
+                            className="btn btn-accent"
+                            type="button"
+                            onClick={async () => {
+                              try {
+                                await cats.updateCategory({ id: Number(c.id), name: editingName });
+                                setEditingId(null);
+                                setEditingName("");
+                                setCatMsg("Category updated.");
+                              } catch (e) {
+                                setCatMsg(e?.message || "Failed to update");
+                              }
+                            }}
+                          >
+                            Save
+                          </button>
+                          <button
+                            className="btn"
+                            type="button"
+                            onClick={() => {
+                              setEditingId(null);
+                              setEditingName("");
+                            }}
+                          >
+                            Cancel
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            className="btn"
+                            type="button"
+                            onClick={() => {
+                              setEditingId(Number(c.id));
+                              setEditingName(c.name);
+                              setCatMsg(null);
+                            }}
+                          >
+                            Rename
+                          </button>
+                          <button
+                            className="btn btn-ghost"
+                            type="button"
+                            onClick={async () => {
+                              setCatMsg(null);
+                              if (!confirm(`Delete category "${c.name}"? Expenses using it will be reassigned to "Other".`)) return;
+                              try {
+                                const out = await cats.deleteCategory({ id: Number(c.id) });
+                                // Locally reassign any expense transactions pointing to this category.
+                                if (out?.reassignedTo) {
+                                  const otherId = Number(out.reassignedTo);
+                                  const nextTx = state.transactions.map((t) =>
+                                    t.type === "expense" && Number(t.categoryId) === Number(c.id)
+                                      ? { ...t, categoryId: otherId, category: "Other" }
+                                      : t
+                                  );
+                                  dispatch({ type: "RESET", payload: { ...state, transactions: nextTx } });
+                                }
+                                setCatMsg("Category deleted.");
+                              } catch (e) {
+                                setCatMsg(e?.message || "Failed to delete");
+                              }
+                            }}
+                          >
+                            Delete
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            ))}
           </div>
         </div>
       </Section>

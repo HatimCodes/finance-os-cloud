@@ -73,7 +73,20 @@ export function SyncProvider({ children }) {
       return null;
     }
     if (savingRef.current) return null;
-    savingRef.current = true;
+    // Strip any legacy/inline categories from the finance snapshot.
+// Categories are synced via categoriesStore (separate table/endpoints).
+let cleanState = state;
+if (state && typeof state === "object" && "categories" in state) {
+  try {
+    cleanState = structuredClone(state);
+    delete cleanState.categories;
+  } catch {
+    const { categories, ...rest } = state;
+    cleanState = rest;
+  }
+}
+
+savingRef.current = true;
     setStatus("syncing");
     try {
       const out = await api.request("/sync/save.php", {

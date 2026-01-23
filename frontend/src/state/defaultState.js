@@ -22,11 +22,8 @@ export function makeDefaultState() {
       { id: uid("need"), name: "Transport", amount: 300, startMonth: "", endMonth: "" },
     ],
     monthNeeds: {},
-    categories: [
-      "Needs", "Food", "Transport", "Fun", "Health", "GF",
-      "Tools", "Subscriptions", "Debt Payment", "Emergency",
-      "Investment", "Long-term", "Other"
-    ],
+    // Categories are now cloud-managed per user (MySQL). Keep this empty for backward compatibility.
+    categories: [],
     buckets: [
       { id: uid("bucket"), name: "Emergency", kind: "savings", target: 0, current: 0 },
       { id: uid("bucket"), name: "Long-term", kind: "savings", target: 0, current: 0 },

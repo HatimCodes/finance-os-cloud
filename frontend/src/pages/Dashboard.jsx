@@ -1,7 +1,9 @@
 import React, { useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import Section from "../components/Section.jsx";
 import Stat from "../components/Stat.jsx";
 import { useComputed, useFinance } from "../state/financeStore.jsx";
+import { useCategories } from "../state/categoriesStore.jsx";
 import { formatMoney, monthKey, todayISO } from "../state/money.js";
 import Modal from "../components/Modal.jsx";
 import ChartCard from "../components/ChartCard.jsx";
@@ -40,11 +42,16 @@ function CleanTooltip({ active, payload, label }) {
 
 function QuickAdd({ monthKey }) {
   const { api, state } = useFinance();
+  const cats = useCategories();
   const currency = state.profile.currency || "MAD";
   const [open, setOpen] = React.useState(false);
   const [kind, setKind] = React.useState("expense");
   const [amount, setAmount] = React.useState("");
-  const [category, setCategory] = React.useState("Food");
+  const [categoryId, setCategoryId] = React.useState(null);
+  React.useEffect(() => {
+    const list = cats.expenseCategories();
+    if (!categoryId && list.length > 0) setCategoryId(Number(list[0].id));
+  }, [cats.categories]);
   const [bucketId, setBucketId] = React.useState(state.buckets[0]?.id || "");
   const [debtId, setDebtId] = React.useState(state.debts[0]?.id || "");
   const [note, setNote] = React.useState("");
@@ -55,7 +62,10 @@ function QuickAdd({ monthKey }) {
     const a = Number(amount||0);
     if (!a || a <= 0) return;
     if (kind === "income") api.addIncome({ date: dateDefault, amount: a, note, payment });
-    if (kind === "expense") api.addExpense({ date: dateDefault, amount: a, category, note, payment, needWant: "Need" });
+    if (kind === "expense") {
+      const selected = cats.map.get(Number(categoryId));
+      api.addExpense({ date: dateDefault, amount: a, categoryId: categoryId ? Number(categoryId) : null, categoryName: selected?.name || "Other", note, payment, needWant: "Need" });
+    }
     if (kind === "bucket") api.addBucket({ date: dateDefault, amount: a, bucketId, note, payment });
     if (kind === "debt") api.addDebtPayment({ date: dateDefault, amount: a, debtId, note, payment });
     setAmount(""); setNote("");
@@ -86,9 +96,13 @@ function QuickAdd({ monthKey }) {
           {kind === "expense" ? (
             <div>
               <div className="label">Category</div>
-              <select className="input" value={category} onChange={(e)=>setCategory(e.target.value)}>
-                {state.categories.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
+              {cats.loading ? (
+                <div className="input flex items-center text-app-muted">Loading…</div>
+              ) : (
+                <select className="input" value={categoryId ?? ""} onChange={(e)=>setCategoryId(Number(e.target.value))}>
+                  {cats.expenseCategories().map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              )}
             </div>
           ) : null}
 
@@ -146,8 +160,10 @@ export default function Dashboard() {
   const [mk, setMk] = React.useState(monthKey(new Date().toISOString().slice(0,10)));
   const c = useComputed(mk);
   const { state, dispatch } = useFinance();
+  const nav = useNavigate();
+  const cats = useCategories();
   const name = state.profile.name?.trim();
-  const byCat = useMemo(() => groupExpensesByCategory(state.transactions, mk).slice(0, 8), [state.transactions, mk]);
+  const byCat = useMemo(() => groupExpensesByCategory(state.transactions, mk, (id) => cats.nameOf(id)).slice(0, 8), [state.transactions, mk, cats.categories]);
   const daily = useMemo(() => dailySpendSeries(state.transactions, mk), [state.transactions, mk]);
   const months = useMemo(() => lastNMonthsKeys(mk, 6), [mk]);
   const netSeries = useMemo(() => netPositionSeries(state, months), [state, months]);
@@ -187,14 +203,20 @@ export default function Dashboard() {
               <div className="w-40">
                 <MonthPicker value={mk} onChange={setMk} />
               </div>
-              <a className="btn btn-ghost" href="/budget" onClick={(e)=>{e.preventDefault(); window.history.pushState({}, "", "/budget"); window.dispatchEvent(new PopStateEvent("popstate"));}}>Edit needs</a>
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => nav("/budget")}
+              >
+                Edit needs
+              </button>
             </div>
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <button className="btn btn-accent" onClick={() => window.location.assign("/daily")}>Add expense</button>
-            <button className="btn" onClick={() => window.location.assign("/buckets")}>Allocate to buckets</button>
-            <button className="btn" onClick={() => window.location.assign("/debts")}>Debt payment</button>
+            <button type="button" className="btn btn-accent" onClick={() => nav("/daily")}>Add expense</button>
+            <button type="button" className="btn" onClick={() => nav("/buckets")}>Allocate to buckets</button>
+            <button type="button" className="btn" onClick={() => nav("/debts")}>Debt payment</button>
           </div>
         </div>
       </div>

@@ -1,10 +1,13 @@
 import { monthKey } from "./money.js";
 
-export function groupExpensesByCategory(transactions, mk){
+export function groupExpensesByCategory(transactions, mk, categoryNameOf = null){
   const tx = transactions.filter(t => t.type==="expense" && monthKey(t.date)===mk);
   const map = new Map();
   for(const t of tx){
-    const k = (t.category || "Other").trim() || "Other";
+    const name = typeof categoryNameOf === "function"
+      ? categoryNameOf(t.categoryId)
+      : (t.category || "Other");
+    const k = String(name || "Other").trim() || "Other";
     map.set(k, (map.get(k) || 0) + Number(t.amount||0));
   }
   return Array.from(map.entries()).map(([name, value])=>({ name, value }))
